@@ -47,6 +47,9 @@ static int32_t map(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, i
 #define SERVO_PULSE_34 1750
 #define SERVO_PULSE_LEN (SERVO_PULSE_MAX - SERVO_PULSE_MIN)
 
+#define SERVO_ABSOLUTE_MIN 800
+#define SERVO_ABSOLUTE_MAX 2200
+
 static uint32_t servo_pulse_len_reverse(uint32_t us) {
   return SERVO_PULSE_LEN - us;
 }
@@ -140,6 +143,10 @@ static void servo_out_init(uint gpio) {
 }
 
 static void write_servos(uint32_t left_us, uint32_t right_us) {
+  // apply safety limits to prevent servos from destroying themselves
+  left_us = max((uint32_t)SERVO_ABSOLUTE_MIN, min((uint32_t)SERVO_ABSOLUTE_MAX, left_us));
+  right_us = max((uint32_t)SERVO_ABSOLUTE_MIN, min((uint32_t)SERVO_ABSOLUTE_MAX, right_us));
+
   pwm_set_chan_level(pwm_gpio_to_slice_num(OUT_LEFT), pwm_gpio_to_channel(OUT_LEFT), left_us);
   pwm_set_chan_level(pwm_gpio_to_slice_num(OUT_RIGHT), pwm_gpio_to_channel(OUT_RIGHT), right_us);
 }
