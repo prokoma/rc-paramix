@@ -6,6 +6,7 @@
 #define BLUE_RGB urgb_u32(0, 0, 255)
 #define WHITE_RGB urgb_u32(255, 255, 255)
 #define AMBER_RGB urgb_u32(255, 90, 0)
+#define TURQUOISE_RGB urgb_u32(0, 56, 255)
 #define YELLOW_RGB urgb_u32(255, 255, 0)
 
 enum ws2812_effect_t {

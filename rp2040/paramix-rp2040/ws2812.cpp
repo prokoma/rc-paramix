@@ -62,6 +62,9 @@ static float g_brightness = 1.0f;
 static uint32_t g_color = 0;
 static uint32_t g_effect = SOLID;
 
+#define PERIOD_FAST 500
+#define PERIOD_SLOW 1500
+
 void ws2812_update() {
   absolute_time_t now = get_absolute_time();
   uint32_t now_ms = to_ms_since_boot(now);
@@ -74,18 +77,18 @@ void ws2812_update() {
     case SOLID:
       break;
     case BLINK_FAST:
-      if (now_ms % 500 > 250)
+      if (now_ms % PERIOD_FAST > PERIOD_FAST / 2)
         brightness = 0.0f;
       break;
     case BLINK_SLOW:
-      if (now_ms % 1000 > 500)
+      if (now_ms % PERIOD_SLOW > PERIOD_SLOW / 2)
         brightness = 0.0f;
       break;
     case BREATHE_FAST:
-      brightness *= abs((int)(now_ms % 500) - 250) / 250.0f;
+      brightness *= abs((int)(now_ms % PERIOD_FAST) - PERIOD_FAST / 2) / ((float)(PERIOD_FAST / 2));
       break;
     case BREATHE_SLOW:
-      brightness *= abs((int)(now_ms % 1000) - 500) / 500.0f;
+      brightness *= abs((int)(now_ms % PERIOD_SLOW) - PERIOD_SLOW / 2) / ((float)(PERIOD_SLOW / 2));
       break;
     }
     if(absolute_time_diff_us(now, g_flash_until) > 0) {

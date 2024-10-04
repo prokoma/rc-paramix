@@ -27,10 +27,12 @@ template <typename T> static T max(T a, T b) { return a > b ? a : b; }
 
 template <typename T> static T min(T a, T b) { return a < b ? a : b; }
 
-template <typename T> static T abs_diff(T a, T b) { return max(a, b) - min(a, b); }
+template <typename T> static T abs_diff(T a, T b) {
+  return max(a, b) - min(a, b);
+}
 
 static int32_t map(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min,
-            int32_t out_max) {
+                   int32_t out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
@@ -43,7 +45,9 @@ static int32_t map(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min,
 #define SERVO_PULSE_34 1750
 #define SERVO_PULSE_LEN (SERVO_PULSE_MAX - SERVO_PULSE_MIN)
 
-static uint32_t servo_pulse_len_reverse(uint32_t us) { return SERVO_PULSE_LEN - us; }
+static uint32_t servo_pulse_len_reverse(uint32_t us) {
+  return SERVO_PULSE_LEN - us;
+}
 
 static bool is_valid_pulse_len(uint32_t len) { return len > 750 && len < 2250; }
 
@@ -130,8 +134,7 @@ static void rc_in_init(uint gpio) {
 static void servo_out_init(uint gpio) {
   pwm_set_clkdiv_int_frac(pwm_gpio_to_slice_num(gpio), 100, 0);
   pwm_set_wrap(pwm_gpio_to_slice_num(gpio), 20000);
-  pwm_set_chan_level(pwm_gpio_to_slice_num(gpio),
-                     pwm_gpio_to_channel(gpio), 0);
+  pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), pwm_gpio_to_channel(gpio), 0);
   pwm_set_counter(pwm_gpio_to_slice_num(gpio), 0);
   gpio_set_function(gpio, GPIO_FUNC_PWM);
 }
@@ -162,7 +165,7 @@ static uint64_t g_cal_ail_center_us_sum = 0;
 static uint64_t g_cal_ele_center_us_sum = 0;
 
 static cal_state_t cal_update(cal_state_t state, uint64_t now, uint32_t ail_us,
-                       uint32_t ele_us) {
+                              uint32_t ele_us) {
   switch (state) {
   case CAL_ENTER:
     return CAL_CENTER;
@@ -201,6 +204,8 @@ static cal_state_t cal_update(cal_state_t state, uint64_t now, uint32_t ail_us,
   case CAL_RATE:
     if (servo_near(ele_us, SERVO_PULSE_MID)) { // wait for ele center
       ws2812_set(AMBER_RGB, BREATHE_FAST);
+      g_cal_data.ail_rate_us = g_cal_data.ele_rate_us =
+          SERVO_PULSE_LEN / 4; // reset to default (small) rates
       return CAL_RATE_LOOP;
     }
     return CAL_RATE;
@@ -216,8 +221,8 @@ static cal_state_t cal_update(cal_state_t state, uint64_t now, uint32_t ail_us,
 
   case CAL_SERVO_OFFSET:
     if (servo_near(ele_us, SERVO_PULSE_MID)) { // wait for ele center
+      ws2812_set(TURQUOISE_RGB, BREATHE_SLOW);
       g_cal_us = now;
-      ws2812_set(AMBER_RGB, BREATHE_SLOW);
       return CAL_SERVO_OFFSET_LOOP;
     }
     return CAL_SERVO_OFFSET;
@@ -225,12 +230,12 @@ static cal_state_t cal_update(cal_state_t state, uint64_t now, uint32_t ail_us,
     if (ail_us > SERVO_PULSE_34) {
       if (now - g_cal_us > 200 * 1000) {
         g_cal_us = now;
-        g_cal_data.servo_offset_us += 4;
+        g_cal_data.servo_offset_us += 2;
       }
     } else if (ail_us < SERVO_PULSE_14) {
       if (now - g_cal_us > 200 * 1000) {
         g_cal_us = now;
-        g_cal_data.servo_offset_us -= 4;
+        g_cal_data.servo_offset_us -= 2;
       }
     } else if (ele_us > SERVO_PULSE_34) { // ele down -> reset
       g_cal_data.servo_offset_us = 0;
@@ -248,33 +253,37 @@ static cal_state_t cal_update(cal_state_t state, uint64_t now, uint32_t ail_us,
 }
 
 static void normal_update(uint64_t now, uint32_t ail_us, uint32_t ele_us) {
-  // if sticks are near center, treat them as exactly in the center to stop servo jitter
-  if(abs_diff(ail_us, g_cal_data.ail_center_us) <= CENTER_DEADZONE_US)
+  // if sticks are near center, treat them as exactly in the center to stop
+  // servo jitter
+  if (abs_diff(ail_us, g_cal_data.ail_center_us) <= CENTER_DEADZONE_US)
     ail_us = g_cal_data.ail_center_us;
-  if(abs_diff(ele_us, g_cal_data.ele_center_us) <= CENTER_DEADZONE_US)
+  if (abs_diff(ele_us, g_cal_data.ele_center_us) <= CENTER_DEADZONE_US)
     ele_us = g_cal_data.ele_center_us;
 
-  int32_t ail_contrib =
-      map(ail_us, g_cal_data.ail_center_us - g_cal_data.ail_rate_us,
-          g_cal_data.ail_center_us + g_cal_data.ail_rate_us, -SERVO_PULSE_LEN,
-          SERVO_PULSE_LEN);
-  int32_t ele_contrib = map(ele_us, g_cal_data.ele_center_us,
-                            g_cal_data.ele_center_us + g_cal_data.ele_rate_us,
-                            0, SERVO_PULSE_LEN);
+  int32_t ail_contrib = map(
+    ail_us,
+    g_cal_data.ail_center_us - g_cal_data.ail_rate_us,
+    g_cal_data.ail_center_us + g_cal_data.ail_rate_us,
+    -SERVO_PULSE_LEN,
+    SERVO_PULSE_LEN
+  );
+  int32_t ele_contrib = map(
+    ele_us,
+    g_cal_data.ele_center_us,
+    g_cal_data.ele_center_us + g_cal_data.ele_rate_us,
+    0,
+    SERVO_PULSE_LEN
+  );
 
-  uint32_t left_us = SERVO_PULSE_MIN +
-                     max((int32_t)0, max(ele_contrib, ail_contrib)) +
-                     g_cal_data.servo_offset_us;
-  uint32_t right_us =
-      SERVO_PULSE_MIN +
-      servo_pulse_len_reverse(max((int32_t)0, max(ele_contrib, -ail_contrib))) +
-      g_cal_data.servo_offset_us;
+  uint32_t left_us  = SERVO_PULSE_MIN + max((int32_t)0, max(ele_contrib, ail_contrib)) + g_cal_data.servo_offset_us;
+  uint32_t right_us = SERVO_PULSE_MIN + servo_pulse_len_reverse(max((int32_t)0, max(ele_contrib, -ail_contrib))) + g_cal_data.servo_offset_us;
 
   ws2812_set(BLACK_RGB);
   write_servos(left_us, right_us);
 }
 
-static void update(uint64_t now, uint32_t ail_us, uint32_t ele_us, bool first_update) {
+static void update(uint64_t now, uint32_t ail_us, uint32_t ele_us,
+                   bool first_update) {
   if (first_update && ele_us < SERVO_PULSE_MIN + 250) {
     g_cal_state = CAL_ENTER;
   }
