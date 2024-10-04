@@ -62,7 +62,7 @@ static float g_brightness = 1.0f;
 static uint32_t g_color = 0;
 static uint32_t g_effect = SOLID;
 
-#define PERIOD_FAST 500
+#define PERIOD_FAST 300
 #define PERIOD_SLOW 1500
 
 void ws2812_update() {

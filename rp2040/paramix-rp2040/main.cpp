@@ -177,7 +177,7 @@ static cal_state_t cal_update(cal_state_t state, uint64_t now, uint32_t ail_us,
     return CAL_DONE;
 
   case CAL_CENTER:
-    ws2812_set(AMBER_RGB);
+    ws2812_set(TURQUOISE_RGB);
     g_cal_us = now;
     g_cal_count = g_cal_ail_center_us_sum = g_cal_ele_center_us_sum = 0;
     return CAL_CENTER_LOOP;
@@ -203,7 +203,7 @@ static cal_state_t cal_update(cal_state_t state, uint64_t now, uint32_t ail_us,
 
   case CAL_RATE:
     if (servo_near(ele_us, SERVO_PULSE_MID)) { // wait for ele center
-      ws2812_set(AMBER_RGB, BREATHE_FAST);
+      ws2812_set(TURQUOISE_RGB, BREATHE_FAST);
       g_cal_data.ail_rate_us = g_cal_data.ele_rate_us =
           SERVO_PULSE_LEN / 4; // reset to default (small) rates
       return CAL_RATE_LOOP;
